@@ -29,18 +29,43 @@ async function run() {
     // // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    const usersCollection = client.db('parcelDB').collection('usersCollection');
-    app.post('/users', async (req, res) => {
+
+    const usersCollection = client.db("parcelDB").collection("usersCollection");
+    const bookingsCollection = client.db("parcelDB").collection("bookingsCollection");
+
+    // Users related api
+    app.post("/users", async (req, res) => {
       const user = req.body;
-      const query = { email: user.email }
+      const query = { email: user.email };
       const existingUser = await usersCollection.findOne(query);
+
       if (existingUser) {
-        return res.send({ Message: 'User already exist', insertedId:null})
+        return res
+          .status(409)
+          .send({ message: "User already exists", insertedId: null });
       }
-      const result = await usersCollection.find(query)
+
+      const result = await usersCollection.insertOne(user);
+
+      res
+        .status(201)
+        .send({
+          message: "User created successfully",
+          insertedId: result.insertedId,
+        });
+    });
+    app.post("/user/bookings", async (req, res) => {
+      const data = req.body;
+      const result = await bookingsCollection.insertOne(data);
       res.send(result);
+
+      
     })
+    app.get('/allUsers', async (req, res) => {
+      const user = await usersCollection.find().toArray();
+      res.send(user)
+    })
+     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -51,6 +76,7 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
 
 app.get('/', (req, res) => {
     res.send('Project is running');
