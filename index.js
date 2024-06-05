@@ -66,6 +66,11 @@ async function run() {
       const user = await usersCollection.find().toArray();
       res.send(user)
     })
+    app.get("/user/role", async (req, res) => {
+      const role = req.query.role;
+      const users = await usersCollection.find({ role: role }).toArray();
+       res.send(users);
+    });
     app.patch('/users/admin/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
