@@ -72,11 +72,24 @@ async function run() {
       const updatedDoc = {
         $set: {
           role: 'admin'
+
         }
       }
       const result= await usersCollection.updateOne(filter,updatedDoc)
       res.send(result)
     })
+    // Make Devivery man api 
+     app.patch("/users/delivery/:id", async (req, res) => {
+       const id = req.params.id;
+       const filter = { _id: new ObjectId(id) };
+       const updatedDoc = {
+         $set: {
+           role: "Delivery",
+         },
+       };
+       const result = await usersCollection.updateOne(filter, updatedDoc);
+       res.send(result);
+     });
      await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
