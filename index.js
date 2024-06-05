@@ -3,7 +3,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -59,11 +59,23 @@ async function run() {
       const result = await bookingsCollection.insertOne(data);
       res.send(result);
 
-      
+
     })
+    // Admin related api
     app.get('/allUsers', async (req, res) => {
       const user = await usersCollection.find().toArray();
       res.send(user)
+    })
+    app.patch('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: 'admin'
+        }
+      }
+      const result= await usersCollection.updateOne(filter,updatedDoc)
+      res.send(result)
     })
      await client.db("admin").command({ ping: 1 });
     console.log(
