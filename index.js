@@ -103,13 +103,21 @@ async function run() {
       if (user) {
         admin=user?.role ==='admin'
       }
-      res.send({admin:true})
+      res.send({admin})
     })
     app.get("/parcels", async (req, res) => {
          
         const parcel = await bookingsCollection.find().toArray();
         res.send(parcel);
-      });
+    });
+    
+    // Normal Users related Api
+    app.get("/parcels/:email", async (req, res) => {
+      const email = req.params.email;
+         const query = { email: email };
+         const parcel = await bookingsCollection.find(query).toArray();
+         res.send(parcel);
+       });
     app.get("/user/role", async (req, res) => {
       const role = req.query.role;
       const users = await usersCollection.find({ role: role }).toArray();
