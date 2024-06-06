@@ -29,7 +29,23 @@ async function run() {
     // // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // // Send a ping to confirm a successful connection
-
+    //MiddleWare
+    const VerifyToken = (req,res,next) => {
+      // console.log('Inside middleware', req.headers.authorization)
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'Forbidden access' });
+       
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: "Forbidden access" });
+        }
+        req.decoded = decoded;
+          next();
+      })
+    
+    }
     const usersCollection = client.db("parcelDB").collection("usersCollection");
     const bookingsCollection = client.db("parcelDB").collection("bookingsCollection");
     // JWT Related api
@@ -44,6 +60,7 @@ async function run() {
     // Users related api
     app.post("/users", async (req, res) => {
       const user = req.body;
+     
       const query = { email: user.email };
       const existingUser = await usersCollection.findOne(query);
 
@@ -54,7 +71,7 @@ async function run() {
       }
 
       const result = await usersCollection.insertOne(user);
-
+ 
       res
         .status(201)
         .send({
@@ -70,11 +87,26 @@ async function run() {
 
     })
     // Admin related api
-    app.get('/allUsers', async (req, res) => {
+    app.get('/allUsers', VerifyToken, async (req, res) => {
+      // console.log(req.headers);
       const user = await usersCollection.find().toArray();
       res.send(user)
     })
-      app.get("/parcels", async (req, res) => {
+    app.get('/users/admin/:email',VerifyToken, async(req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(401).send({message: 'unauthorized access'})
+      }
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin=user?.role ==='admin'
+      }
+      res.send({admin:true})
+    })
+    app.get("/parcels", async (req, res) => {
+         
         const parcel = await bookingsCollection.find().toArray();
         res.send(parcel);
       });
