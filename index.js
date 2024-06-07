@@ -33,13 +33,13 @@ async function run() {
     const VerifyToken = (req,res,next) => {
       // console.log('Inside middleware', req.headers.authorization)
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: 'Forbidden access' });
+        return res.status(401).send({ message: 'unauthorized access' });
        
       }
       const token = req.headers.authorization.split(" ")[1];
       jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
         if (err) {
-            return res.status(401).send({ message: "Forbidden access" });
+            return res.status(401).send({ message: "unauthorized access" });
         }
         req.decoded = decoded;
           next();
@@ -57,6 +57,17 @@ async function run() {
       });
       res.send({token})
     })
+    // use verify admin after verifyToken
+    const verifyAdmin =async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      const isAdmin = user?.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).send({message: 'Forbidden access'})
+      }
+      next();
+    }
     // Users related api
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -87,7 +98,7 @@ async function run() {
 
     })
     // Admin related api
-    app.get('/allUsers', VerifyToken, async (req, res) => {
+    app.get('/allUsers', VerifyToken,verifyAdmin, async (req, res) => {
       // console.log(req.headers);
       const user = await usersCollection.find().toArray();
       res.send(user)
