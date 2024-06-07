@@ -118,6 +118,13 @@ async function run() {
          const parcel = await bookingsCollection.find(query).toArray();
          res.send(parcel);
     });
+     app.get("/allUsers/:email", VerifyToken, async (req, res) => {
+       // console.log(req.headers);
+        const email = req.params.email;
+        const query = { email: email };
+       const user = await usersCollection.findOne(query);
+       res.send(user);
+     });
     app.patch("/parcels/:id", async (req, res) => {
       const id = req.params.id;
       const filter = {_id: new ObjectId(id)};
