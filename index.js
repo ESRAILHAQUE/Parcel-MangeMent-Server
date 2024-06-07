@@ -97,6 +97,12 @@ async function run() {
 
 
     })
+    // Common api
+     app.get("/allUsers/common", async (req, res) => {
+       // console.log(req.headers);
+       const user = await usersCollection.find().toArray();
+       res.send(user);
+     });
     // Admin related api
     app.get('/allUsers', VerifyToken,verifyAdmin, async (req, res) => {
       // console.log(req.headers);
