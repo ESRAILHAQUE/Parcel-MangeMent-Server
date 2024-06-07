@@ -117,7 +117,18 @@ async function run() {
          const query = { email: email };
          const parcel = await bookingsCollection.find(query).toArray();
          res.send(parcel);
-       });
+    });
+    app.patch("/parcels/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+         Status:'Cancelled'
+       }
+     }
+      const result = await bookingsCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
     app.get("/user/role", async (req, res) => {
       const role = req.query.role;
       const users = await usersCollection.find({ role: role }).toArray();
