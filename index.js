@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const app = express();
 const cors = require('cors');
 var jwt = require("jsonwebtoken");
@@ -57,6 +58,9 @@ async function run() {
     }
     const usersCollection = client.db("parcelDB").collection("usersCollection");
     const bookingsCollection = client.db("parcelDB").collection("bookingsCollection");
+    const reviewsCollection = client
+      .db("parcelDB")
+      .collection("reviewsCollection");
     // JWT Related api
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -99,13 +103,54 @@ async function run() {
           insertedId: result.insertedId,
         });
     });
+
+   app.patch("/profileUpdate/:email", async (req, res) => {
+     const email = req.params.email;
+     const query = { email: email }; // Filter to find the document with the specified email
+
+     // Assuming req.body contains the updated profile data
+     const update = { $set: req.body }; // Use $set to specify the fields to update and their new values
+
+     try {
+       const result = await usersCollection.updateOne(query, update); // Update the document with the specified email
+       res.send(result);
+     } catch (error) {
+       console.error("Error updating profile:", error);
+       res.status(500).send({ message: "Internal Server Error" });
+     }
+   });
+ 
     app.post("/user/bookings", async (req, res) => {
       const data = req.body;
       const result = await bookingsCollection.insertOne(data);
       res.send(result);
 
-
     })
+     app.post("/review", async (req, res) => {
+       const data = req.body;
+       const result = await reviewsCollection.insertOne(data);
+       res.send(result);
+     });
+     app.get("/review/:id", async (req, res) => {
+       const id = req.params.id;
+       const query = { DeliveryManID: id };
+       const result = await reviewsCollection.find(query).toArray();
+       res.send(result);
+     });
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+    
     // Common api
      app.get("/allUsers/common", async (req, res) => {
        // console.log(req.headers);
@@ -183,8 +228,7 @@ async function run() {
 
        const updatedDoc = {
          $set: updateFields,
-       };
-
+       }; 
        try {
          const result = await bookingsCollection.updateOne(filter, updatedDoc);
          res.send(result);
@@ -193,6 +237,23 @@ async function run() {
          res.status(500).send({ message: "Internal Server Error" });
        }
      });
+    app.patch("/update/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateFields = req.body; // Expecting fields like DeliveryManID, ApproximateDeliveryDate, and Status
+
+      const updatedDoc = {
+        $set: updateFields,
+      };
+         delete updateFields._id;
+      try {
+        const result = await bookingsCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating parcel:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
 
     // problem
     app.get("/parcelsId/:id", async (req, res) => {
