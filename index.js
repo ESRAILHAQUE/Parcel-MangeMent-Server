@@ -7,7 +7,16 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+//Must remove "/" from your production URL
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://parcel-944a6.web.app",
+      "https://parcel-944a6.firebaseapp.com",
+    ],
+  })
+);
 app.use(express.json());
 
 
@@ -122,8 +131,21 @@ async function run() {
       }
       res.send({admin})
     })
+    // Delivery Man checking
+      app.get("/users/deliveryMan/:email", VerifyToken, async (req, res) => {
+        const email = req.params.email;
+        if (email !== req.decoded.email) {
+          return res.status(401).send({ message: "unauthorized access" });
+        }
+        const query = { email: email };
+        const user = await usersCollection.findOne(query);
+        let deliveryMan = false;
+        if (user) {
+          deliveryMan = user?.role === "DeliveryMan";
+        }
+        res.send({ deliveryMan });
+      });
     app.get("/parcels", async (req, res) => {
-         
         const parcel = await bookingsCollection.find().toArray();
         res.send(parcel);
     });
@@ -135,10 +157,10 @@ async function run() {
          const parcel = await bookingsCollection.find(query).toArray();
          res.send(parcel);
     });
-     app.get("/allUsers/:email", VerifyToken, async (req, res) => {
+     app.get("/allUsers/:email", async (req, res) => {
        // console.log(req.headers);
-        const email = req.params.email;
-        const query = { email: email };
+       const email = req.params.email;
+       const query = { email: email };
        const user = await usersCollection.findOne(query);
        res.send(user);
      });
@@ -153,11 +175,52 @@ async function run() {
       const result = await bookingsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+    // For assignming parcel
+     app.patch("/parcelsAssign/:id", async (req, res) => {
+       const id = req.params.id;
+       const filter = { _id: new ObjectId(id) };
+       const updateFields = req.body; // Expecting fields like DeliveryManID, ApproximateDeliveryDate, and Status
+
+       const updatedDoc = {
+         $set: updateFields,
+       };
+
+       try {
+         const result = await bookingsCollection.updateOne(filter, updatedDoc);
+         res.send(result);
+       } catch (error) {
+         console.error("Error updating parcel:", error);
+         res.status(500).send({ message: "Internal Server Error" });
+       }
+     });
+
+    // problem
+    app.get("/parcelsId/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await bookingsCollection.findOne(filter);
+      res.send(result);
+    });
+    
+      app.get("/payment/:id", async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const result = await bookingsCollection.findOne(filter);
+        res.send(result);
+      });
+
     app.get("/user/role", async (req, res) => {
       const role = req.query.role;
       const users = await usersCollection.find({ role: role }).toArray();
        res.send(users);
     });
+      app.get("/parcels/Delivery/DeliveryManID", async (req, res) => {
+        const DeliveryManID = req.query.DeliveryManID;
+        const myParcels = await bookingsCollection
+          .find({ DeliveryManID: DeliveryManID })
+          .toArray();
+        res.send(myParcels);
+      });
     app.patch('/users/admin/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -176,19 +239,19 @@ async function run() {
        const filter = { _id: new ObjectId(id) };
        const updatedDoc = {
          $set: {
-           role: "Delivery",
+           role: "DeliveryMan",
          },
        };
        const result = await usersCollection.updateOne(filter, updatedDoc);
        res.send(result);
      });
-     await client.db("admin").command({ ping: 1 });
+    //  await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
     // Ensures that the client will close when you finish/error
-      // await client.close();
+      // await client.close(); 
       
   }
 }
